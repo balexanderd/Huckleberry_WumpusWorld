@@ -28,11 +28,15 @@ MyAI::MyAI() : Agent()
 	dead = false;
 	shot = false;
 	direction = 'E';
-	side = 'S';
+	side = 'B';
 	condition = 0;
 	prevAction = CLIMB;
 	score = 0;
+	maxPenalty = -24;
 	srand(time(NULL));
+	myLocations.push_back(coordinate(0,0,'E', false, false));
+	X = 0;
+	Y = 0;
 	// ======================================================================
 	// YOUR CODE ENDS
 	// ======================================================================
@@ -51,7 +55,9 @@ Agent::Action MyAI::getAction
 	// YOUR CODE BEGINS
 	// ======================================================================
 	score--;
+	addNewState(bump, breeze, stench);
 	Action newAction;
+	char prevSide = side;
 	
 	if(glitter) {
 		gold = true;
@@ -60,13 +66,16 @@ Agent::Action MyAI::getAction
 
 	else {
 		if(breeze || stench) {
-			if(prevAction == CLIMB)
+			if(prevAction == CLIMB) {
+				myLocations[0].stench = stench;
+				myLocations[0].breeze = breeze;
 				newAction = climbOrRandom(breeze || stench);
+			}
 			else
 				newAction = previousSquare();
 		}
 
-		else if(gold || score <= -4)
+		else if(gold || score <= maxPenalty)
 			newAction = goHome(bump);
 
 		else
@@ -77,10 +86,12 @@ Agent::Action MyAI::getAction
 	side = evalSide(newAction);
 	prevAction = newAction;
 
-	std::cout << "side: " << side << ", direction: " << direction << std::endl;
+	//printCurrentState(prevSide);
+	//printStates();
 
-	if((gold || score <= -4) && side == 'B')
+	if((gold || score <= maxPenalty) && side == 'B')
 		return CLIMB;
+
 	return newAction;
 	// ======================================================================
 	// YOUR CODE ENDS
@@ -90,16 +101,34 @@ Agent::Action MyAI::getAction
 // ======================================================================
 // YOUR CODE BEGINS
 // ======================================================================
+void MyAI::printCurrentState(char prevSide)
+{
+	std::cout << "X: " << myLocations[myLocations.size()-1].X << ", "
+                  << "Y: " << myLocations[myLocations.size()-1].Y << ", "
+                  << "Dir: " << myLocations[myLocations.size()-1].direction << ", "
+                  << "Breeze: " << myLocations[myLocations.size()-1].breeze << ", "
+                  << "Stench: " << myLocations[myLocations.size()-1].stench << ", "
+                  << "side " << prevSide << std::endl;
+}
+
+void MyAI::printStates()
+{
+	for(int i = 0; i < myLocations.size(); i++)
+		std::cout << "X: " << myLocations[i].X << ", "
+                	  << "Y: " << myLocations[i].Y << ", "
+                	  << "Dir: " << myLocations[i].direction << ", "
+                	  << "Breeze: " << myLocations[i].breeze << ", "
+                	  << "Stench: " << myLocations[i].stench << std::endl;
+}
+
 Agent::Action MyAI::leftOrForward()
 {
 	int random = rand() % 10 + 1;
-	if(random <= 3) {
-		side = 'W';		//This should be changed!!!!
-		direction = 'N';
+	if(random <= 3)
 		return TURN_LEFT;
-	}
 	return FORWARD;
 }
+
 Agent::Action MyAI::climbOrRandom(bool exitTrigger)
 {
 	if(exitTrigger)
@@ -111,9 +140,8 @@ Agent::Action MyAI::previousSquare()
 {
 	if(condition == 0)
 	{
-		bool decision = rand() % 2;
 		condition = 1;
-		return decision ? TURN_LEFT : TURN_RIGHT;
+		return randomTurn();
 	}
 	if(condition == 1)
 	{
@@ -124,9 +152,53 @@ Agent::Action MyAI::previousSquare()
 	return FORWARD;
 }
 
+Agent::Action MyAI::randomTurn()
+{
+	bool decision = rand() % 2;
+	return decision ? TURN_LEFT : TURN_RIGHT;
+}
+
+char MyAI::oppositeDirection(char otherDirection)
+{
+	if(otherDirection == 'N')
+		return 'S';
+	if(otherDirection == 'E')
+		return 'W';
+	if(otherDirection == 'S')
+		return 'N';
+	/*else west*/
+	return 'E';
+}
+
+Agent::Action MyAI::ninetyDegAction(char prevDirection)
+{
+	if(direction == 'N')
+		if(prevDirection == 'E')
+			return TURN_LEFT;
+	if(direction == 'E')
+		if(prevDirection == 'S')
+			return TURN_LEFT;
+	if(direction == 'S')
+		if(prevDirection == 'W')
+			return TURN_LEFT;
+	if(direction == 'W')
+		if(prevDirection == 'N')
+			return TURN_LEFT;
+			
+	return TURN_RIGHT;
+}
+
 Agent::Action MyAI::goHome(bool wall)
 {
-	return randomWeightedAction(wall);
+	//return randomWeightedAction(wall);
+	if(X == 0 && Y == 0)
+		return CLIMB;
+	coordinate prevState = myLocations[myLocations.size()-2];
+	if(direction == oppositeDirection(prevState.direction))
+		return FORWARD;
+	if(direction == prevState.direction)	
+		return randomTurn();
+	return ninetyDegAction(prevState.direction);
 }
 
 Agent::Action MyAI::randomWeightedAction(bool wall)
@@ -135,6 +207,41 @@ Agent::Action MyAI::randomWeightedAction(bool wall)
 	if(wall)
 		side = getNewSide();
 	return getRandomAction(decision);
+}
+
+void MyAI::addNewState(bool wall, bool breeze, bool stench)
+{
+	if(prevAction == FORWARD && !wall)
+        {
+		if(wall == true)
+			std::cout << "Why am I in here?" << std::endl;
+                if(direction == 'N')
+                        Y++;
+                else if(direction == 'E')
+                        X++;
+                else if(direction == 'S')
+                        Y--;
+                else if(direction == 'W')
+			X--;
+		if(!(breeze || stench)) {
+			coordinate newState = coordinate(X, Y, direction, breeze, stench);
+			bool add = true;
+			int pos = 0;
+			for(pos; pos < myLocations.size(); pos++) {
+				if(newState == myLocations[pos])
+				{
+					add = false;
+					break;
+				}
+			}
+			if(add == false)
+				myLocations.erase(myLocations.begin()+pos+1, myLocations.end());
+			else
+				myLocations.push_back(coordinate(X, Y, direction, breeze, stench));
+        	}
+	}
+        else
+                myLocations[myLocations.size()-1].direction = direction;
 }
 
 char MyAI::evalSide(Action newAction)
@@ -310,6 +417,10 @@ Agent::Action MyAI::getRandomAction(unsigned char decision)
 				return TURN_LEFT;
 			else if(direction == 'W')
 				return TURN_RIGHT;
+			if(prevAction == CLIMB) {
+				side = 'B';
+				return climbOrRandom(false);
+			}
 			return FORWARD;
 		case 'b' :
 			if(direction == 'S')

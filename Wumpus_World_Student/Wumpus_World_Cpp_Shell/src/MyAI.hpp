@@ -24,6 +24,8 @@
 #include <stdlib.h>
 #include <time.h>
 #include <iostream>
+#include <vector>
+#include "coordinate.h"
 
 class MyAI : public Agent
 {
@@ -50,12 +52,22 @@ public:
 		char condition;
 		Action prevAction;
 		int score;
-		
+		int maxPenalty;
+		unsigned int X;
+		unsigned int Y;
+		std::vector<coordinate> myLocations;
+
+		void printCurrentState(char prevSide);
+		void printStates();
 		Action leftOrForward();
 		Action climbOrRandom(bool exitTrigger);
 		Action previousSquare();
+		Action randomTurn();
+		char oppositeDirection(char otherDirection);
+		Action ninetyDegAction(char prevDirection);
 		Action goHome(bool wall);
 		Action randomWeightedAction(bool wall);
+		void addNewState(bool bump, bool breeze, bool stench);
 		char evalSide(Action newAction);
 		char getNewDirection(Action newAction);
 		char getNewSide();
