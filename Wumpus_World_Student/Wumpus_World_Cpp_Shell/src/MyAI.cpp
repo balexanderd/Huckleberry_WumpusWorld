@@ -34,9 +34,19 @@ MyAI::MyAI() : Agent()
 	score = 0;
 	maxPenalty = -24;
 	srand(time(NULL));
-	myLocations.push_back(coordinate(0,0,'E', false, false));
+	myLocations.push_back(coordinate(0,0,'E', false, false, true));
 	X = 0;
 	Y = 0;
+	for(int i = 0; i < 7; i++)
+		for(int j = 0; j < 7; j++)
+			allLocations[i][j] = coordinate(i, j, 'U', false, false, false);
+	//std::cout << "pass" << std::endl;
+	allLocations[0][0].visited = true;
+	eWall = 0;
+	nWall = 0;
+	norSum = easSum = souSum = wesSum = 0;
+	timeout = 0;
+	moveNumber = 0;
 	// ======================================================================
 	// YOUR CODE ENDS
 	// ======================================================================
@@ -55,6 +65,7 @@ Agent::Action MyAI::getAction
 	// YOUR CODE BEGINS
 	// ======================================================================
 	score--;
+	moveNumber++;
 	addNewState(bump, breeze, stench);
 	Action newAction;
 	char prevSide = side;
@@ -67,8 +78,8 @@ Agent::Action MyAI::getAction
 	else {
 		if(breeze || stench) {
 			if(prevAction == CLIMB) {
-				myLocations[0].stench = stench;
-				myLocations[0].breeze = breeze;
+				allLocations[0][0].stench = myLocations[0].stench = stench;
+				allLocations[0][0].breeze = myLocations[0].breeze = breeze;
 				newAction = climbOrRandom(breeze || stench);
 			}
 			else
@@ -203,6 +214,16 @@ Agent::Action MyAI::goHome(bool wall)
 
 Agent::Action MyAI::randomWeightedAction(bool wall)
 {
+	bool aidedByHeuristic = false;
+	if(moveNumber%10 == 0)
+		aidedByHeuristic = updateUnexploredRegionScore();
+	if(aidedByHeuristic)
+		int timeout = 7;
+	if(timeout > 0) {
+		timeout--;
+		return suggestUnexploredDirection();
+	}
+	
 	unsigned char decision = rand() % 12 + 1;
 	if(wall)
 		side = getNewSide();
@@ -211,6 +232,7 @@ Agent::Action MyAI::randomWeightedAction(bool wall)
 
 void MyAI::addNewState(bool wall, bool breeze, bool stench)
 {
+	updateAllLocations(wall, breeze, stench); //Adds Information about square to map.
 	if(prevAction == FORWARD && !wall)
         {
 		if(wall == true)
@@ -224,7 +246,7 @@ void MyAI::addNewState(bool wall, bool breeze, bool stench)
                 else if(direction == 'W')
 			X--;
 		if(!(breeze || stench)) {
-			coordinate newState = coordinate(X, Y, direction, breeze, stench);
+			coordinate newState = coordinate(X, Y, direction, breeze, stench, true);
 			bool add = true;
 			int pos = 0;
 			for(pos; pos < myLocations.size(); pos++) {
@@ -237,11 +259,21 @@ void MyAI::addNewState(bool wall, bool breeze, bool stench)
 			if(add == false)
 				myLocations.erase(myLocations.begin()+pos+1, myLocations.end());
 			else
-				myLocations.push_back(coordinate(X, Y, direction, breeze, stench));
+				myLocations.push_back(coordinate(X, Y, direction, breeze, stench, true));
         	}
 	}
-        else
-                myLocations[myLocations.size()-1].direction = direction;
+    else
+        myLocations[myLocations.size()-1].direction = direction;
+}
+
+void MyAI::updateAllLocations(bool wall, bool breeze, bool stench)
+{
+	if(wall)
+		nWall = eWall = X;
+
+	allLocations[X][Y].breeze = breeze;
+	allLocations[X][Y].stench = stench;
+	allLocations[X][Y].visited = true;
 }
 
 char MyAI::evalSide(Action newAction)
@@ -437,6 +469,106 @@ Agent::Action MyAI::getRandomAction(unsigned char decision)
 	else if(decision >= 7)
 		return TURN_RIGHT;
 	return FORWARD;
+}
+
+Agent::Action MyAI::ninetyDegAlignAction(char suggestedDirection)
+{
+	if(suggestedDirection == 'N') {
+		if(direction == 'E')
+			return TURN_LEFT;
+		if(direction == 'W')
+			return TURN_RIGHT;
+	}
+	else if(suggestedDirection == 'E') {
+		if(direction == 'S')
+			return TURN_LEFT;
+		if(direction == 'N')
+			return TURN_RIGHT;
+	}
+	else if(suggestedDirection == 'S') {
+		if(direction == 'W')
+			return TURN_LEFT;
+		if(direction == 'E')
+			return TURN_RIGHT;
+	}
+	else /*suggestedDirection == 'W'*/ {
+		if(direction == 'N')
+			return TURN_LEFT;
+		if(direction == 'S')
+			return TURN_RIGHT;
+	}
+	/*In case of bug, return something to at least continue*/
+	return FORWARD;
+}
+
+Agent::Action MyAI::alignDirectionToSuggested(char suggestedDirection)
+{
+	if(direction == suggestedDirection)
+		return FORWARD;
+	if(oppositeDirection(suggestedDirection))
+		return randomTurn();
+	return ninetyDegAlignAction(suggestedDirection);
+}
+
+char MyAI::getSuggestedDirection()
+{
+	if(norSum > souSum) {
+		if(norSum > easSum) {
+			if(norSum > wesSum)
+				return 'N';
+			return 'W';
+		}
+		if(easSum > wesSum)
+			return 'E';
+		return 'W';
+	}
+	else /*souSum >= norSum*/ {
+		if(souSum > easSum) {
+			if(souSum > wesSum)
+				return 'S';
+			return 'W';
+		}
+		if(easSum > wesSum)
+			return 'E';
+		return 'W';
+	}
+}
+
+Agent::Action MyAI::suggestUnexploredDirection()
+{
+	char suggestedDirection = getSuggestedDirection();
+
+	return alignDirectionToSuggested(suggestedDirection);
+}
+
+bool MyAI::updateUnexploredRegionScore()
+{
+	norSum = easSum = souSum = wesSum = 0;
+	
+	for(int i = 0; i < 7; i++){
+		if(eWall && i == eWall)
+			continue;
+		for(int j = 0; j < 7; j++){
+			if(nWall && j == nWall)
+				continue;
+			if( !(allLocations[i][j].visited) ){
+				if(i > X)
+					easSum++;
+				else if(i < X)
+					wesSum++;
+				if(j > Y)
+					norSum++;
+				else if(j < Y)
+					souSum++;
+			}
+		}
+	}
+	
+	if(norSum-2 <= souSum && norSum+2 >= souSum)
+		if(wesSum-2 <= easSum && wesSum+2 >= easSum)
+			return false;
+
+	return true;
 }
 // ======================================================================
 // YOUR CODE ENDS

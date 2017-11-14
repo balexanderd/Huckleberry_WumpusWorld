@@ -52,10 +52,16 @@ public:
 		char condition;
 		Action prevAction;
 		int score;
+		unsigned int moveNumber;
 		int maxPenalty;
 		unsigned int X;
 		unsigned int Y;
+		unsigned int eWall;
+		unsigned int nWall;
+		unsigned int norSum, easSum, souSum, wesSum;
+		unsigned int timeout;
 		std::vector<coordinate> myLocations;
+		coordinate allLocations[7][7];
 
 		void printCurrentState(char prevSide);
 		void printStates();
@@ -68,10 +74,16 @@ public:
 		Action goHome(bool wall);
 		Action randomWeightedAction(bool wall);
 		void addNewState(bool bump, bool breeze, bool stench);
+		void updateAllLocations(bool wall, bool breeze, bool stench);
 		char evalSide(Action newAction);
 		char getNewDirection(Action newAction);
 		char getNewSide();
 		Action getRandomAction(unsigned char decision);
+		Action ninetyDegAlignAction(char suggestedDirection);
+		Action alignDirectionToSuggested(char suggestedDirection);
+		char getSuggestedDirection();
+		Action suggestUnexploredDirection();
+		bool updateUnexploredRegionScore();
 	// ======================================================================
 	// YOUR CODE ENDS
 	// ======================================================================

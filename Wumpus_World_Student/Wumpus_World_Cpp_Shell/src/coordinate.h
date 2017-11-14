@@ -5,8 +5,9 @@ class coordinate
 	public:
 		unsigned int X, Y;
 		char direction;
-		bool breeze, stench;
-		coordinate(unsigned x, unsigned y, char dir, bool b, bool s) : X(x), Y(y), direction(dir), breeze(b), stench(s) {}
+		bool breeze, stench, visited;
+		coordinate() : X(0), Y(0), direction('U'), breeze(false), stench(false), visited(false) {}
+		coordinate(unsigned int x, unsigned int y, char dir, bool b, bool s, bool v) : X(x), Y(y), direction(dir), breeze(b), stench(s), visited(v) {}
 		coordinate& operator= (const coordinate& c)
 		{
 			if(this != &c) {
@@ -15,6 +16,7 @@ class coordinate
 				direction = c.direction;
 				this->breeze = c.breeze;
 				this->stench = c.stench;
+				this->visited = c.visited;
 			}
 			return *this;
 		}
