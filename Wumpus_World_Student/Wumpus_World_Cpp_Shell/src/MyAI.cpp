@@ -40,10 +40,9 @@ MyAI::MyAI() : Agent()
 	for(int i = 0; i < 7; i++)
 		for(int j = 0; j < 7; j++)
 			allLocations[i][j] = coordinate(i, j, 'U', false, false, false);
-	//std::cout << "pass" << std::endl;
 	allLocations[0][0].visited = true;
-	eWall = 0;
-	nWall = 0;
+	eWall = 7;
+	nWall = 7;
 	norSum = easSum = souSum = wesSum = 0;
 	timeout = 0;
 	moveNumber = 0;
@@ -67,6 +66,7 @@ Agent::Action MyAI::getAction
 	score--;
 	moveNumber++;
 	addNewState(bump, breeze, stench);
+	neighbors = getNeighbors();
 	Action newAction;
 	char prevSide = side;
 	
@@ -97,8 +97,9 @@ Agent::Action MyAI::getAction
 	side = evalSide(newAction);
 	prevAction = newAction;
 
-	//printCurrentState(prevSide);
+	printCurrentState(prevSide);
 	//printStates();
+	printNeighbors();
 
 	if((gold || score <= maxPenalty) && side == 'B')
 		return CLIMB;
@@ -130,6 +131,13 @@ void MyAI::printStates()
                 	  << "Dir: " << myLocations[i].direction << ", "
                 	  << "Breeze: " << myLocations[i].breeze << ", "
                 	  << "Stench: " << myLocations[i].stench << std::endl;
+}
+
+void MyAI::printNeighbors()
+{
+	std::cout << "Hello\n";
+	for(int i = 0; i < neighbors.size(); i++)
+		neighbors[i].printCoordinate();
 }
 
 Agent::Action MyAI::leftOrForward()
@@ -266,10 +274,28 @@ void MyAI::addNewState(bool wall, bool breeze, bool stench)
         myLocations[myLocations.size()-1].direction = direction;
 }
 
+std::vector<coordinate> MyAI::getNeighbors()
+{
+	std::vector<coordinate> newNeighbors;
+	if(X != 0)
+		newNeighbors.push_back(coordinate(allLocations[X-1][Y]));
+	if(X != eWall)
+		newNeighbors.push_back(coordinate(allLocations[X+1][Y]));
+	if(Y != 0)
+		newNeighbors.push_back(coordinate(allLocations[X][Y-1]));
+	if(Y != nWall)
+		newNeighbors.push_back(coordinate(allLocations[X][Y+1]));
+	return newNeighbors;
+}
+
 void MyAI::updateAllLocations(bool wall, bool breeze, bool stench)
 {
 	if(wall)
-		nWall = eWall = X;
+		if(direction == 'N')
+			nWall = Y;
+		else if(direction == 'E')
+			eWall = X;
+
 
 	allLocations[X][Y].breeze = breeze;
 	allLocations[X][Y].stench = stench;

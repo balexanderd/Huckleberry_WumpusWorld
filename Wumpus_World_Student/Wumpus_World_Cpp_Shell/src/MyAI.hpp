@@ -61,10 +61,12 @@ public:
 		unsigned int norSum, easSum, souSum, wesSum;
 		unsigned int timeout;
 		std::vector<coordinate> myLocations;
+		std::vector<coordinate> neighbors;
 		coordinate allLocations[7][7];
 
 		void printCurrentState(char prevSide);
 		void printStates();
+		void printNeighbors();
 		Action leftOrForward();
 		Action climbOrRandom(bool exitTrigger);
 		Action previousSquare();
@@ -74,6 +76,7 @@ public:
 		Action goHome(bool wall);
 		Action randomWeightedAction(bool wall);
 		void addNewState(bool bump, bool breeze, bool stench);
+		std::vector<coordinate> getNeighbors();
 		void updateAllLocations(bool wall, bool breeze, bool stench);
 		char evalSide(Action newAction);
 		char getNewDirection(Action newAction);
