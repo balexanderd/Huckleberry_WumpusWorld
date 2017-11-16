@@ -97,10 +97,10 @@ Agent::Action MyAI::getAction
 	side = evalSide(newAction);
 	prevAction = newAction;
 
-	printCurrentState(prevSide);
+	//printCurrentState(prevSide);
 	//printStates();
-	printNeighbors();
-	std::cout << "==============================================" << std::endl;
+	//printNeighbors();
+	//std::cout << "==============================================" << std::endl;
 
 	if((gold || score <= maxPenalty) && side == 'B')
 		return CLIMB;
@@ -244,11 +244,13 @@ Agent::Action MyAI::randomWeightedAction(bool wall)
 
 
 	if(foundUnvisited) {
-		std::cout << "I should have done this." << std::endl;
+		//std::cout << "I should have done this." << std::endl;
 		char desiredDirection = getDesiredBearing(desiredCoordinate.X, desiredCoordinate.Y);
-		std::cout << "desiredDirection : " << desiredDirection << std::endl;
+		//std::cout << "desiredDirection : " << desiredDirection << std::endl;
 		return alignDirectionToSuggested(desiredDirection);
 	}
+
+	return goHome(wall);
 	
 	unsigned char decision = rand() % 12 + 1;
 	if(wall)
