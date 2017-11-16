@@ -63,7 +63,7 @@ class coordinate
 		}
 		void printCoordinate()
 		{
-			std::cout << "(X, Y): (" << X << ", " << Y << ")  hDistance: " << hDistance << std::endl;
+			std::cout << "(X, Y): (" << X << ", " << Y << ")  hDistance: " << hDistance << "  Visited: " << visited << std::endl;
 		}
 };
 #endif

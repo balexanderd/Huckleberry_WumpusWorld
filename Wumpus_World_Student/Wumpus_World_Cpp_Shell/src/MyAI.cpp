@@ -550,7 +550,7 @@ Agent::Action MyAI::alignDirectionToSuggested(char suggestedDirection)
 {
 	if(direction == suggestedDirection)
 		return FORWARD;
-	if(oppositeDirection(suggestedDirection))
+	if(oppositeDirection(suggestedDirection) == direction)
 		return randomTurn();
 	return ninetyDegAlignAction(suggestedDirection);
 }
