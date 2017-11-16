@@ -100,6 +100,7 @@ Agent::Action MyAI::getAction
 	printCurrentState(prevSide);
 	//printStates();
 	printNeighbors();
+	std::cout << "==============================================" << std::endl;
 
 	if((gold || score <= maxPenalty) && side == 'B')
 		return CLIMB;
@@ -135,7 +136,6 @@ void MyAI::printStates()
 
 void MyAI::printNeighbors()
 {
-	std::cout << "Hello\n";
 	for(int i = 0; i < neighbors.size(); i++)
 		neighbors[i].printCoordinate();
 }
@@ -246,6 +246,7 @@ Agent::Action MyAI::randomWeightedAction(bool wall)
 	if(foundUnvisited) {
 		std::cout << "I should have done this." << std::endl;
 		char desiredDirection = getDesiredBearing(desiredCoordinate.X, desiredCoordinate.Y);
+		std::cout << "desiredDirection : " << desiredDirection << std::endl;
 		return alignDirectionToSuggested(desiredDirection);
 	}
 	
