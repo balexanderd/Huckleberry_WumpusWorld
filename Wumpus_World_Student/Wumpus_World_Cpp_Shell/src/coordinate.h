@@ -46,6 +46,10 @@ class coordinate
 		{
 			return !(this->X == c.X && this->Y == c.Y);
 		}
+		bool operator< (const coordinate& c) const
+		{
+			return (this->hDistance < c.hDistance);
+		}
 		coordinate& operator+= (const coordinate& c)
 		{
 			this->X += c.X;

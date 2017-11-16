@@ -26,6 +26,7 @@
 #include <iostream>
 #include <vector>
 #include "coordinate.h"
+#include <algorithm>
 
 class MyAI : public Agent
 {
@@ -85,6 +86,7 @@ public:
 		Action ninetyDegAlignAction(char suggestedDirection);
 		Action alignDirectionToSuggested(char suggestedDirection);
 		char getSuggestedDirection();
+		char getDesiredBearing(unsigned int desiredX, unsigned int desiredY);
 		Action suggestUnexploredDirection();
 		bool updateUnexploredRegionScore();
 	// ======================================================================

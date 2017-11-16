@@ -222,7 +222,7 @@ Agent::Action MyAI::goHome(bool wall)
 
 Agent::Action MyAI::randomWeightedAction(bool wall)
 {
-	bool aidedByHeuristic = false;
+	/*bool aidedByHeuristic = false;
 	if(moveNumber%10 == 0)
 		aidedByHeuristic = updateUnexploredRegionScore();
 	if(aidedByHeuristic)
@@ -230,6 +230,23 @@ Agent::Action MyAI::randomWeightedAction(bool wall)
 	if(timeout > 0) {
 		timeout--;
 		return suggestUnexploredDirection();
+	}*/
+	
+	bool foundUnvisited = false;
+	coordinate desiredCoordinate;
+	for(int i = 0; i < neighbors.size(); i++) {
+		if(!neighbors[i].visited) {
+			desiredCoordinate = neighbors[i];
+			foundUnvisited = true;
+			break;
+		}
+	}
+
+
+	if(foundUnvisited) {
+		std::cout << "I should have done this." << std::endl;
+		char desiredDirection = getDesiredBearing(desiredCoordinate.X, desiredCoordinate.Y);
+		return alignDirectionToSuggested(desiredDirection);
 	}
 	
 	unsigned char decision = rand() % 12 + 1;
@@ -285,6 +302,7 @@ std::vector<coordinate> MyAI::getNeighbors()
 		newNeighbors.push_back(coordinate(allLocations[X][Y-1]));
 	if(Y != nWall)
 		newNeighbors.push_back(coordinate(allLocations[X][Y+1]));
+	sort(newNeighbors.rbegin(), newNeighbors.rend());
 	return newNeighbors;
 }
 
@@ -534,6 +552,18 @@ Agent::Action MyAI::alignDirectionToSuggested(char suggestedDirection)
 	if(oppositeDirection(suggestedDirection))
 		return randomTurn();
 	return ninetyDegAlignAction(suggestedDirection);
+}
+
+char MyAI::getDesiredBearing(unsigned int desiredX, unsigned int desiredY)
+{
+	if(desiredX == X+1)
+		return 'E';
+	if(desiredX == X-1)
+		return 'W';
+	if(desiredY == Y+1)
+		return 'N';
+	/*else*(desiredY == Y-1)*/
+	return 'S';
 }
 
 char MyAI::getSuggestedDirection()
