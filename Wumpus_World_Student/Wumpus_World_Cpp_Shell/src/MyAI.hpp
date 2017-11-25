@@ -1,4 +1,4 @@
-// ======================================================================
+	// ======================================================================
 // FILE:        MyAI.hpp
 //
 // AUTHOR:      Abdullah Younis
@@ -25,8 +25,86 @@
 #include <time.h>
 #include <iostream>
 #include <vector>
-#include "coordinate.h"
 #include <algorithm>
+#include <iomanip>
+#include <string>
+
+// ==========================================================================
+// YOUR CLASS BEGINS
+// ==========================================================================
+class coordinate
+{
+	public:
+		unsigned int X, Y, hDistance;
+		char direction;
+		bool breeze, stench, visited;
+		int pit, wumpus;
+		coordinate() : X(0), Y(0), direction('U'), breeze(false), stench(false), visited(false), hDistance(0), pit(0), wumpus(0) {}
+		coordinate(unsigned int x, unsigned int y, char dir, bool b, bool s, bool v)
+			: X(x), Y(y), direction(dir), breeze(b), stench(s), visited(v), hDistance(x+y), pit(0), wumpus(0) {}
+		coordinate(const coordinate& c)
+		{
+			if(this != &c) {
+				this->X = c.X;
+				this->Y = c.Y;
+				direction = c.direction;
+				this->breeze = c.breeze;
+				this->stench = c.stench;
+				this->visited = c.visited;
+				this->pit = c.pit;
+				this->wumpus = c.wumpus;
+				this->hDistance = c.hDistance;
+			}
+		}
+		coordinate& operator= (const coordinate& c)
+		{
+			if(this != &c) {
+				this->X = c.X;
+				this->Y = c.Y;
+				direction = c.direction;
+				this->breeze = c.breeze;
+				this->stench = c.stench;
+				this->visited = c.visited;
+				this->pit = c.pit;
+				this->wumpus = c.wumpus;
+				this->hDistance = c.hDistance;
+			}
+			return *this;
+		}
+		bool operator== (const coordinate& c) const
+		{
+			return (this->X == c.X && this->Y == c.Y);
+		}
+		bool operator!= (const coordinate& c) const
+		{
+			return !(this->X == c.X && this->Y == c.Y);
+		}
+		bool operator< (const coordinate& c) const
+		{
+			return (this->hDistance < c.hDistance);
+		}
+		coordinate& operator+= (const coordinate& c)
+		{
+			this->X += c.X;
+			this->Y += c.Y;
+		}
+		coordinate& operator-= (const coordinate& c)
+		{
+			if(this->X >= c.X && this->Y >= c.Y)
+				this->X -= c.X, this->Y -= c.Y;
+			return *this;
+		}
+		void printCoordinate()
+		{
+			std::cout << "(X, Y): (" << X << ", " << Y << ")  hDistance: " << hDistance
+					  << "  Visited: " << visited << "  Breeze: " << breeze << "  Stench: "
+					  << stench << "  Pit: " << pit << "  Wumpus: " << wumpus << std::endl;
+		}
+};
+// ==========================================================================
+// YOUR CLASS ENDS
+// ==========================================================================
+
 
 class MyAI : public Agent
 {
@@ -55,6 +133,7 @@ public:
 		int score;
 		unsigned int moveNumber;
 		int maxPenalty;
+		int wumpusSighting;
 		unsigned int X;
 		unsigned int Y;
 		unsigned int eWall;
@@ -68,7 +147,12 @@ public:
 		void printCurrentState(char prevSide);
 		void printStates();
 		void printNeighbors();
+		void printBoard();
 		Action leftOrForward();
+		Action climbOrShoot(bool exitTrigger, bool stench, bool scream);
+		Action shootWumpus();
+		Action shootAction();
+		coordinate getPrevStenchCoord();
 		Action climbOrRandom(bool exitTrigger);
 		Action previousSquare();
 		Action randomTurn();
