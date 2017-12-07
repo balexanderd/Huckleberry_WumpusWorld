@@ -1,4 +1,4 @@
-	// ======================================================================
+// ======================================================================
 // FILE:        MyAI.hpp
 //
 // AUTHOR:      Abdullah Younis
@@ -38,10 +38,10 @@ class coordinate
 		unsigned int X, Y, hDistance;
 		char direction;
 		bool breeze, stench, visited;
-		int pit, wumpus;
-		coordinate() : X(0), Y(0), direction('U'), breeze(false), stench(false), visited(false), hDistance(0), pit(0), wumpus(0) {}
-		coordinate(unsigned int x, unsigned int y, char dir, bool b, bool s, bool v)
-			: X(x), Y(y), direction(dir), breeze(b), stench(s), visited(v), hDistance(x+y), pit(0), wumpus(0) {}
+		int pit, wumpus, score;
+		coordinate() : X(0), Y(0), direction('U'), breeze(false), stench(false), visited(false), hDistance(0), pit(0), wumpus(0), score(0) {}
+		coordinate(unsigned int x, unsigned int y, char dir, bool b, bool s, bool v, int scr)
+			: X(x), Y(y), direction(dir), breeze(b), stench(s), visited(v), hDistance(x+y), pit(0), wumpus(0), score(scr) {}
 		coordinate(const coordinate& c)
 		{
 			if(this != &c) {
@@ -54,6 +54,7 @@ class coordinate
 				this->pit = c.pit;
 				this->wumpus = c.wumpus;
 				this->hDistance = c.hDistance;
+				this->score = c.score;
 			}
 		}
 		coordinate& operator= (const coordinate& c)
@@ -68,6 +69,7 @@ class coordinate
 				this->pit = c.pit;
 				this->wumpus = c.wumpus;
 				this->hDistance = c.hDistance;
+				this->score = c.score;
 			}
 			return *this;
 		}
@@ -126,6 +128,7 @@ public:
 		bool gold;
 		bool dead;
 		bool shot;
+		bool justShot;
 		char direction;
 		char side;
 		char condition;
@@ -150,8 +153,8 @@ public:
 		void printBoard();
 		Action leftOrForward();
 		Action climbOrShoot(bool exitTrigger, bool stench, bool scream);
-		Action shootWumpus();
-		Action shootAction();
+		Action shootWumpus(bool breeze);
+		Action shootAction(bool breeze);
 		coordinate getPrevStenchCoord();
 		Action climbOrRandom(bool exitTrigger);
 		Action previousSquare();
@@ -161,7 +164,7 @@ public:
 		Action goHome(bool wall);
 		Action randomWeightedAction(bool wall);
 		void addNewState(bool bump, bool breeze, bool stench);
-		std::vector<coordinate> getNeighbors();
+		std::vector<coordinate> getNeighbors(unsigned int X, unsigned int Y);
 		void updateAllLocations(bool wall, bool breeze, bool stench);
 		char evalSide(Action newAction);
 		char getNewDirection(Action newAction);
@@ -171,6 +174,11 @@ public:
 		Action alignDirectionToSuggested(char suggestedDirection);
 		char getSuggestedDirection();
 		char getDesiredBearing(unsigned int desiredX, unsigned int desiredY);
+		bool allVisited(const coordinate &coord);
+		bool lowerCostCoordinate(const coordinate &leftCoord, const coordinate &rightCoord);
+		char adjacentDirection(const coordinate &leftCoord, const coordinate &rightCoord);
+		bool adjacentCoordinate(const coordinate &leftCoord, const coordinate &rightCoord);
+		bool shorterPath();
 		Action suggestUnexploredDirection();
 		bool updateUnexploredRegionScore();
 	// ======================================================================

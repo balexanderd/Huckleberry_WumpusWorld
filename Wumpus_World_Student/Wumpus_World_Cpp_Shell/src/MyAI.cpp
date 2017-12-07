@@ -27,6 +27,7 @@ MyAI::MyAI() : Agent()
 	gold = false;
 	dead = false;
 	shot = false;
+	justShot = false;
 	direction = 'E';
 	side = 'B';
 	condition = 0;
@@ -34,12 +35,12 @@ MyAI::MyAI() : Agent()
 	score = 0;
 	maxPenalty = -100;
 	srand(time(NULL));
-	myLocations.push_back(coordinate(0,0,'E', false, false, true));
+	myLocations.push_back(coordinate(0,0,'E', false, false, true, 0));
 	X = 0;
 	Y = 0;
 	for(int i = 0; i < 7; i++)
 		for(int j = 0; j < 7; j++)
-			allLocations[i][j] = coordinate(i, j, 'U', false, false, false);
+			allLocations[i][j] = coordinate(i, j, 'U', false, false, false, 0);
 	allLocations[0][0].visited = true;
 	allLocations[0][0].wumpus = 2;
 	allLocations[0][0].pit = 2;
@@ -68,28 +69,31 @@ Agent::Action MyAI::getAction
 	// ======================================================================
 	score--;
 	moveNumber++;
-	if(scream) {
-		dead = true;
-	}
 	addNewState(bump, breeze, stench); //DON'T PUT ANYTHING BEFORE ADD NEW STATE!
-	neighbors = getNeighbors();
+	neighbors = getNeighbors(X, Y);
 	updateAllLocations(bump, breeze, stench); //Adds Information about current square and it's neighbors to map.
+	shorterPath();
 	Action newAction;
 	char prevSide = side;
-
+	if(scream) dead = true;
 	if(glitter) {
 		gold = true;
 		newAction = GRAB;
 	}
 	else {
 		if(breeze || stench) {
-			if(prevAction == CLIMB || X == 0 && Y == 0 && prevAction == SHOOT)
+			if(gold || score <= maxPenalty || allVisited(allLocations[X][Y]))
+				newAction = goHome(bump);
+			else if(prevAction == CLIMB || prevAction == SHOOT && X == 0 && Y == 0)
 				newAction = climbOrShoot(breeze, stench, scream);
-			else if(breeze || shot && !dead || wumpusSighting < 2)
-				newAction = previousSquare();
-			else if(wumpusSighting >= 2 && !shot)
-				newAction = shootWumpus();
-			else if(gold || score <= maxPenalty)
+			else if(justShot) {
+				justShot = false;
+				newAction = FORWARD;
+			}
+			else if(!shot && wumpusSighting >= 2 && (!(getPrevStenchCoord()).breeze || !breeze)) {
+                                newAction = shootWumpus(breeze);
+			}
+			else if(breeze || wumpusSighting < 2)
 				newAction = goHome(bump);
 			else
 				newAction = randomWeightedAction(bump);
@@ -106,16 +110,19 @@ Agent::Action MyAI::getAction
 	side = evalSide(newAction);
 	prevAction = newAction;
 
-	//printCurrentState(prevSide);
-	//std::cout << "==============================================" << std::endl;
-	//printStates();
-	//std::cout << "==============================================" << std::endl;
-	//printNeighbors();
-	//printBoard();
-	//std::cout << "==============================================" << std::endl;
+//	std::cout << "==============================================\n";
+//	printCurrentState(prevSide);
+//	std::cout << "==============================================\n";
+//	printStates();
+//	std::cout << "==============================================\n";
+//	printNeighbors();
+//	std::cout << "==============================================\n";
+//	printBoard();
+//	std::cout << "==============================================\n\n";
+//	std::cout << '\n';
 
 	if((gold || score <= maxPenalty) && side == 'B')
-		return CLIMB;
+		return CLIMB; //Some kind of fail safe maybe??
 
 	return newAction;
 	// ======================================================================
@@ -143,7 +150,8 @@ void MyAI::printStates()
                   << "Y: " << myLocations[i].Y << ", "
                   << "Dir: " << myLocations[i].direction << ", "
                   << "Breeze: " << myLocations[i].breeze << ", "
-                  << "Stench: " << myLocations[i].stench << std::endl;
+                  << "Stench: " << myLocations[i].stench << ", "
+		  << "Visited: " << myLocations[i].visited << std::endl;
 }
 
 void MyAI::printNeighbors()
@@ -187,89 +195,83 @@ Agent::Action MyAI::climbOrShoot(bool exitTrigger, bool stench, bool scream)
 {
 	if(exitTrigger)
 		return CLIMB;
-	if(stench && !shot) {
-		shot = true;
-		return SHOOT;
-	}
-	if(scream) {
-		dead = true;
-		return FORWARD;
-	}
-	return CLIMB;
+	if(stench && !shot)
+		return shootAction(exitTrigger);
+	return FORWARD;
 }
 
 
 
-Agent::Action MyAI::shootWumpus()
+Agent::Action MyAI::shootWumpus(bool breeze)
 {
 	coordinate prevStench = getPrevStenchCoord();
 	//std::cout << "prevStenchCoordinate(X, Y) = (" << prevStench.X << ", " << prevStench.Y << ")" << std::endl; 
 	if(prevStench.X != X && prevStench.Y != Y) {
 		if(prevStench.X+2 == X) {
 			if(direction == 'E')
-				return shootAction();
+				return shootAction(breeze);
 			return alignDirectionToSuggested('E');
 		}
 		if(prevStench.X-2 == X) {
 			if(direction == 'W')
-				return shootAction();
+				return shootAction(breeze);
 			return alignDirectionToSuggested('W');
 		}
 		if(prevStench.Y+2 == Y) {
 			if(direction == 'N')
-				return shootAction();
+				return shootAction(breeze);
 			return alignDirectionToSuggested('N');
 		}
 		if(prevStench.Y-2 == Y) {
 			if(direction == 'S')
-				return shootAction();
+				return shootAction(breeze);
 			return alignDirectionToSuggested('S');
 		}
 		if(prevStench.X-1 == X && prevStench.Y-1 == Y) {
 			if(X < eWall && allLocations[X+1][Y].visited) {
 				if(direction == 'N')
-					return shootAction();
+					return shootAction(breeze);
 				return alignDirectionToSuggested('N');
 			}
 			if(Y < nWall && allLocations[X][Y+1].visited) {
 				if(direction == 'E')
-					return shootAction();
+					return shootAction(breeze);
 				return alignDirectionToSuggested('E');
 			}
 		}
 		if(prevStench.X-1 == X && prevStench.Y+1 == Y) {
 			if(X < eWall && allLocations[X+1][Y].visited) {
 				if(direction == 'S')
-					return shootAction();
+					return shootAction(breeze);
 				return alignDirectionToSuggested('S');
 			}
 			if(Y > 0 && allLocations[X][Y-1].visited) {
 				if(direction == 'E')
-					return shootAction();
+					return shootAction(breeze);
 				return alignDirectionToSuggested('E');
 			}
 		}
 		if(prevStench.X+1 == X && prevStench.Y+1 == Y) {
 			if(X > 0 && allLocations[X-1][Y].visited) {
 				if(direction == 'S')
-					return shootAction();
+					return shootAction(breeze);
 				return alignDirectionToSuggested('S');
 			}
 			if(Y < nWall && allLocations[X][Y-1].visited) {
 				if(direction == 'W')
-					return shootAction();
+					return shootAction(breeze);
 				return alignDirectionToSuggested('W');
 			}
 		}
 		if(prevStench.X+1 == X && prevStench.Y-1 == Y) {
 			if(X > 0 && allLocations[X-1][Y].visited) {
 				if(direction == 'N')
-					return shootAction();
+					return shootAction(breeze);
 				return alignDirectionToSuggested('N');
 			}
 			if(Y > 0 && allLocations[X][Y+1].visited) {
 				if(direction == 'W')
-					return shootAction();
+					return shootAction(breeze);
 				return alignDirectionToSuggested('W');
 			}
 		}
@@ -298,8 +300,10 @@ coordinate MyAI::getPrevStenchCoord()
 	return coordinate(allLocations[X][Y]);
 }
 
-Agent::Action MyAI::shootAction()
+Agent::Action MyAI::shootAction(bool breeze)
 {
+	if(breeze)
+		justShot = true;
 	shot = true;
 	return SHOOT;
 }
@@ -393,6 +397,7 @@ Agent::Action MyAI::randomWeightedAction(bool wall)
 	
 	bool foundUnvisited = false;
 	coordinate desiredCoordinate;
+	int erase = -1;
 	for(int i = 0; i < neighbors.size(); i++) {
 		if(!neighbors[i].visited) {
 			desiredCoordinate = neighbors[i];
@@ -429,19 +434,17 @@ void MyAI::addNewState(bool wall, bool breeze, bool stench)
 		wumpusSighting++;
 	
 	if(prevAction == FORWARD && !wall) //When we move forward back from previously visited this boolean is triggered (stenchy square)
-    {
+    	{
 		if(direction == 'N')
-            Y++;
-        else if(direction == 'E')
-            X++;
-        else if(direction == 'S')
-            Y--;
-        else if(direction == 'W')
+           		Y++;
+        	else if(direction == 'E')
+            		X++;
+        	else if(direction == 'S')
+            		Y--;
+        	else if(direction == 'W')
 			X--;
 		
-		//if(!(breeze || (stench && !dead) || prevAction == SHOOT)) {
-		if(!breeze) {
-			coordinate newState = coordinate(X, Y, direction, breeze, stench, true);
+			coordinate newState = coordinate(X, Y, direction, breeze, stench, true, score);
 			bool add = true;
 			int pos = 0;
 			for(pos; pos < myLocations.size(); pos++) {
@@ -455,14 +458,15 @@ void MyAI::addNewState(bool wall, bool breeze, bool stench)
 			if(add == false)
 				myLocations.erase(myLocations.begin()+pos+1, myLocations.end());
 			else
-				myLocations.push_back(coordinate(X, Y, direction, breeze, stench, true));
-        }
+				myLocations.push_back(coordinate(X, Y, direction, breeze, stench, true, score));
 	}
-    else
-        myLocations[myLocations.size()-1].direction = direction;
+    	else {
+        	(myLocations.back()).direction = direction;
+		(myLocations.back()).score = score;
+	}
 }
 
-std::vector<coordinate> MyAI::getNeighbors()
+std::vector<coordinate> MyAI::getNeighbors(unsigned int X, unsigned int Y)
 {
 	std::vector<coordinate> newNeighbors;
 	if(X != 0)
@@ -473,6 +477,15 @@ std::vector<coordinate> MyAI::getNeighbors()
 		newNeighbors.push_back(coordinate(allLocations[X][Y-1]));
 	if(Y != nWall)
 		newNeighbors.push_back(coordinate(allLocations[X][Y+1]));
+	if(shot && !dead) {
+		bool found = false;
+		for(auto iter = newNeighbors.begin(); iter != newNeighbors.end(); iter++) {
+			if(iter->X == 0 && iter->Y == 1) {
+				newNeighbors.erase(iter);
+				break;
+			}
+		}
+	}
 	sort(newNeighbors.rbegin(), newNeighbors.rend());
 	return newNeighbors;
 }
@@ -495,7 +508,7 @@ void MyAI::updateAllLocations(bool wall, bool breeze, bool stench)
 			if(othIter->X == iter->X && othIter->Y == iter->Y)
 				continue;
 
-			if(othIter->wumpus != 2 && stench && !dead)
+			if(!shot && othIter->wumpus != 2 && stench && !dead)
 				allLocations[othIter->X][othIter->Y].wumpus = othIter->wumpus = 1;
 		
 			else
@@ -817,6 +830,69 @@ bool MyAI::updateUnexploredRegionScore()
 			return false;
 
 	return true;
+}
+
+bool MyAI::allVisited(const coordinate &coord)
+{
+	std::vector<coordinate> neighborz = getNeighbors(coord.X, coord.Y);
+	for(auto iter = neighborz.begin(); iter != neighborz.end(); iter++)
+		if(!iter->visited)
+			return false;
+	return true;	
+}
+
+bool MyAI::lowerCostCoordinate(const coordinate &leftCoord, const coordinate &rightCoord)
+{
+	return leftCoord.score < rightCoord.score;
+}
+
+char MyAI::adjacentDirection(const coordinate &leftCoord, const coordinate &rightCoord)
+{
+	if(leftCoord.X == rightCoord.X)
+                if(leftCoord.Y+1 == rightCoord.Y)
+			return 'N';
+		if(leftCoord.Y-1 == rightCoord.Y)
+                        return 'S';
+        if(leftCoord.Y == rightCoord.Y)
+                if(leftCoord.X+1 == rightCoord.X)
+			return 'E';
+		if(leftCoord.X-1 == rightCoord.X)
+                        return 'W';
+	int dir = rand() % 4;
+	return (dir == 0) ? 'N' : ((dir == 1) ? 'S' : ((dir == 2) ? 'E' : 'W'));	
+}
+
+bool MyAI::adjacentCoordinate(const coordinate &leftCoord, const coordinate &rightCoord)
+{
+	if(leftCoord.X == rightCoord.X)
+		if(leftCoord.Y+1 == rightCoord.Y || leftCoord.Y-1 == rightCoord.Y)
+			return true;
+	if(leftCoord.Y == rightCoord.Y)
+		if(leftCoord.X+1 == rightCoord.X || leftCoord.X-1 == rightCoord.X)
+			return true;
+	
+	return false;
+}
+
+bool MyAI::shorterPath()
+{
+	coordinate currentSquare = allLocations[X][Y];
+	coordinate shortCircuit = currentSquare;
+	int i = myLocations.size()-1;
+	int j = i;
+	for(i; i >= 0; i--) {
+		if(!(gold || allVisited(myLocations[i])))
+			break;
+		if(adjacentCoordinate(myLocations[i], currentSquare) && lowerCostCoordinate(myLocations[i], currentSquare))
+			j = i, shortCircuit = myLocations[i];
+	}
+	if(currentSquare != shortCircuit) {
+		myLocations.erase(myLocations.begin() + j + 1, myLocations.end());
+		(myLocations.back()).direction = adjacentDirection(shortCircuit, currentSquare);
+		myLocations.push_back(currentSquare);
+		return true;
+	}
+	return false;
 }
 // ======================================================================
 // YOUR CODE ENDS
